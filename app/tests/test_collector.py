@@ -9,6 +9,7 @@ from app.collector import (
 )
 
 
+@patch("app.collector.platform.system", new=lambda: "Linux")
 @patch("app.collector.subprocess.run")
 def test_get_load_average_success(mock_run):
     mock_run.return_value = Mock(
@@ -25,6 +26,7 @@ def test_get_load_average_success(mock_run):
 
 
 @patch("app.collector.subprocess.run")
+@patch("app.collector.platform.system", new=lambda: "Linux")
 def test_get_load_average_command_error(mock_run):
     mock_run.side_effect = FileNotFoundError("uptime absent")
 
