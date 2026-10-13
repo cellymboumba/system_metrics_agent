@@ -1,0 +1,31 @@
+# ---------- Stage 1 : builder ----------
+FROM python:3.12-slim-bookworm AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ---------- Stage 2 : image finale ----------
+FROM python:3.12-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# procps fournit la commande `uptime` utilisée par collector.py
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# Utilisateur non-root
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY app/ ./app/
+
+USER app
+
+# Valeurs par défaut, surchargées à l'exécution (docker run -e / compose)
+ENV METRICS_ENDPOINT=http://api:8000/metrics \
+    COLLECTION_INTERVAL=5 \
+    REQUEST_TIMEOUT=5
+
+CMD ["python", "-m", "app.agent"]
